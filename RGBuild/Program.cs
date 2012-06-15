@@ -23,7 +23,7 @@ namespace RGBuild
         public const string RGversion = "0v295";
 
         private static readonly string[] CmdLineOptions = new string[] { 
-            "/ui", "/guided", "/banner", "/crc32", 
+            "/guided", "/banner", "/crc32", 
             "/cpukey", "/1blkey", 
             "/create", "/copy", 
             "/extract", "/extractfile", 
@@ -1020,7 +1020,7 @@ namespace RGBuild
             LoadStoredKeys();
             // print help if no arguments or /help is specified)))
             showBanner();
-            if (args.Length == 0 || (args.Length == 1 && (args[0].ToLower() == "/help" || args[0].ToLower() == "/h" || args[0] == "/?")))
+            if (args.Length == 1 && (args[0].ToLower() == "/help" || args[0].ToLower() == "/h" || args[0] == "/?"))
             {
                 HelpWriter.ShowFullHelp();
                 return;
@@ -1048,7 +1048,7 @@ namespace RGBuild
 
             
 
-            if (!Arguments.Recognized.ContainsKey("/ui"))
+            if (Arguments.Recognized.Count > 0)
             {
                 if(String.IsNullOrEmpty(file))
                     PrintError("You must specify a file.");
@@ -2025,7 +2025,6 @@ namespace RGBuild
             // store the abbreviated options here
             Dictionary<string, string> dictionary = new Dictionary<string, string>
             {
-                { "/ui",  "/ui"    },
                 { "/1bl", "/1blkey"    },
                 { "/cpu", "/cpukey"    },
                 { "/c",   "/create"    },

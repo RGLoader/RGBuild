@@ -20,6 +20,7 @@ rm *.suo
 rm *.user
 rm */*.user
 echo commiting changes..
+git add *
 if [ ! -n "$desc" ]
 then
     git commit

@@ -41,7 +41,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="INIFileParser">
-      <HintPath>..\INIFileParser.dll</HintPath>
+      <HintPath>.\INIFileParser.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

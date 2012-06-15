@@ -759,7 +759,7 @@ namespace RGBuild.NAND
             }
             if (PreviousLoader !=null && PreviousLoader.GetType() == typeof(Bootloader2BL))
             {
-                if ((PreviousLoader.Flags & (ushort)0x1000) != 0)
+                if ((PreviousLoader.Flags & (ushort)Lists.XBOX_BLDR_FLAG.NewEnc) != 0)
                 {
                     Array.Resize(ref HmacShaNonce, HmacShaNonce.Length+0x10);
                     byte[] CBAdata = PreviousLoader.GetData(true);
@@ -844,6 +844,16 @@ namespace RGBuild.NAND
                 {
                     Array.Resize(ref HmacShaNonce, 0x20);
                     Array.Copy(CPUKey, 0, HmacShaNonce, 0x10, 0x10);
+                }
+                if (PreviousLoader != null && PreviousLoader.GetType() == typeof(Bootloader2BL))
+                {
+                    if ((PreviousLoader.Flags & (ushort)Lists.XBOX_BLDR_FLAG.NewEnc) != 0)
+                    {
+                        Array.Resize(ref HmacShaNonce, HmacShaNonce.Length + 0x10);
+                        byte[] CBAdata = PreviousLoader.GetData(true);
+                        CBAdata[6] = 0; CBAdata[7] = 0;
+                        Array.Copy(CBAdata, 0, HmacShaNonce, HmacShaNonce.Length - 0x10, 0x10);
+                    }
                 }
                 EncryptedData = HmacRc4(DecryptedData);
                 io.Writer.Write(EncryptedData);
