@@ -1,0 +1,18 @@
+﻿
+
+#TODO
+
+--fix rgh parts
+
+Replace xell-gggggg with latest + colors
+
+
+
+
+TODO LATER:
+
+Bad blocks are not taken into account when extracting filesystem files in the GUI.
+
+Move lists to Lists.cs
+
+SMC Version info to gui
