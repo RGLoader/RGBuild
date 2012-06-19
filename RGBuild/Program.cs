@@ -122,11 +122,12 @@ namespace RGBuild
             string exploitType = "RGH";
             string consoleType = "";
 
-            string jtag_syscall = "0x350";
-            string jtag_bldrLoc = "0x6D000";
-            string jtag_payload = "jtag_payload.bin";
 
             string jtag_pairing2bl = "0x000000";
+			
+			string jtag_syscall = "0x350";
+            string jtag_bldrLoc = "0x6D000";
+            string jtag_payload = "jtag_payload.bin";
 
 
             List<int> badblocks = new List<int>();
