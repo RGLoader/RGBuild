@@ -32,7 +32,7 @@ git add *
 if ["%desc%"]==[] (
 git commit
 ) else (
-git commit -m '%desc%'
+git commit -m "%desc%"
 )
 
 git push -u origin master
