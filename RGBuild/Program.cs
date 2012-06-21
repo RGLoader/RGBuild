@@ -1480,7 +1480,7 @@ namespace RGBuild
                         parser = new FileIniDataParser();
                         parsedData = parser.LoadFile(jtagINI);
 
-                        if (parsedData == null) PrintError("Unable to parse jtag ini.");
+                        if (parsedData == null) PrintError("Unable to parse jtag ini at: " + jtagINI);
 
                         //Console.WriteLine("Consoletype: " + consoleType);
                         if (!String.IsNullOrEmpty(parsedData[consoleType]["2BL"]))
