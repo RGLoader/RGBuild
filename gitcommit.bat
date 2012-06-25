@@ -27,7 +27,7 @@ del /Q *.suo
 del /Q /S *.user
 
 echo commiting changes..
-git add *
+git add -A
 
 if ["%desc%"]==[] (
 git commit
@@ -35,5 +35,11 @@ git commit
 git commit -m "%desc%"
 )
 
-git push -u origin master
+rem git status
+
+"C:\Program Files (x86)\Git\bin\sh.exe" --login -i -c "git push origin"
+
+rem git push -u origin master
 )
+
+PAUSE
