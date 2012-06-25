@@ -1390,9 +1390,9 @@ namespace RGBuild
                         }
                     }
 
-                    File.Copy(NANDDATADIR + "\\CB_A." + CB.Build + ".bin", LOADERDIR + "\\2BL\\CB_A." + CB.Build + ".bin", true);
-                    File.Copy(NANDDATADIR + "\\CD." + CD.Build + ".bin", LOADERDIR + "\\4BL\\CD." + CD.Build + ".bin", true);
-                    File.Copy(NANDDATADIR + "\\" + CE.Magic + "." + CE.Build + ".bin", LOADERDIR + "\\5BL\\" + CE.Magic + "." + CE.Build + ".bin", true);
+                    //File.Copy(NANDDATADIR + "\\CB_A." + CB.Build + ".bin", LOADERDIR + "\\2BL\\CB_A." + CB.Build + ".bin", true);
+                    //File.Copy(NANDDATADIR + "\\CD." + CD.Build + ".bin", LOADERDIR + "\\4BL\\CD." + CD.Build + ".bin", true);
+                    //File.Copy(NANDDATADIR + "\\" + CE.Magic + "." + CE.Build + ".bin", LOADERDIR + "\\5BL\\" + CE.Magic + "." + CE.Build + ".bin", true);
 
                     if (exploitType == "JTAG" && !Lists.JTAG_CB.Contains(CB.Build))
                     {
