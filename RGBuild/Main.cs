@@ -750,7 +750,7 @@ namespace RGBuild
 
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("RGBuild "+Program.version+"\nby stoker25, tydye81 and #RGLoader@EFnet");
+            MessageBox.Show("RGBuild "+Program.Version+"\nby stoker25, tydye81 and #RGLoader@EFnet");
         }
 
         private void addPayloadToolStripMenuItem_Click(object sender, EventArgs e)
@@ -845,7 +845,7 @@ namespace RGBuild
 
         private void Main_Load(object sender, EventArgs e)
         {
-            this.Text = "RGBuild "+Program.version;
+            this.Text = "RGBuild "+Program.Version;
         }
 
         

@@ -294,7 +294,7 @@ namespace RGBuild.IO
             _fsSequence0 = data[0];
             byte[] buffer = new byte[2];
             Array.Copy(data, 1, buffer, 0, 2);
-            Array.Reverse(buffer);
+            //Array.Reverse(buffer);
             buffer[0] = (byte)(buffer[0] & 0xF);
             BlockId = BitConverter.ToInt16(buffer, 0);
             _fsSequence1 = data[3];
@@ -316,8 +316,8 @@ namespace RGBuild.IO
             data[0] = _fsSequence0;
             byte[] buffer = BitConverter.GetBytes(BlockId);
 
-            Array.Reverse(buffer);
-            Array.Copy(buffer, 0, data, 0, 2);
+            //Array.Reverse(buffer);
+            Array.Copy(buffer, 0, data, 1, 2);
             data[3] = _fsSequence1;
             data[4] = _fsSequence2;
             data[5] = _badBlockIndicator;

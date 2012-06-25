@@ -19,10 +19,10 @@ namespace RGBuild
     {
        
 
-        public const string version = "3.61";
+        public const string Version = "3.61";
         public const string RGversion = "0v295";
 
-        private static readonly string[] CmdLineOptions = new string[] { 
+        private static readonly string[] CmdLineOptions = new[] { 
             "/guided", "/banner", "/crc32", 
             "/cpukey", "/1blkey", 
             "/create", "/copy", 
@@ -49,7 +49,7 @@ namespace RGBuild
             try
             {
                 StoredKeys = new StringCollection();
-                string key = ThirdParty.RegistryHelper.ReadKey("StoredKeys");
+                string key = RegistryHelper.ReadKey("StoredKeys");
                 if (String.IsNullOrEmpty(key))
                     return false;
                 string[] keys = key.Split(new[] { "\r\n" }, StringSplitOptions.None);
@@ -65,12 +65,10 @@ namespace RGBuild
         }
         public static bool SaveStoredKeys()
         {
-            string keydata = "";
-            foreach (string str in StoredKeys)
-                keydata += str + "\r\n";
-            return ThirdParty.RegistryHelper.WriteKey("StoredKeys", keydata);
+            string keydata = StoredKeys.Cast<string>().Aggregate("", (current, str) => current + (str + "\r\n"));
+            return RegistryHelper.WriteKey("StoredKeys", keydata);
         }
-        public static string LoadFromIni(ref NANDImage Image, string inipath)
+        public static string LoadFromIni(ref NANDImage image, string inipath)
         {
             string path = Path.GetDirectoryName(inipath);
             //Parse the ini file
@@ -80,6 +78,7 @@ namespace RGBuild
             if (parsedData == null)
             {
                 PrintError("Error opening ini file.");
+                return String.Empty;
             }
             
             /* load our values from the ini first, then check the arguments! >.> */
@@ -94,6 +93,7 @@ namespace RGBuild
             string sparetype = "SmallBlock";
             string blockcount = "0x400";
             string pagesperblock = "0x20";
+// ReSharper disable InconsistentNaming
             string addr2bl = "0x8000";
             string addr6bl = "0x70000";
             string copyright = " Copyright ms bleh";
@@ -118,6 +118,7 @@ namespace RGBuild
             string _5BL = "";
             string _6BL = "";
             string _7BL = "";
+// ReSharper restore InconsistentNaming
 
             string exploitType = "RGH";
             string consoleType = "";
@@ -155,7 +156,7 @@ namespace RGBuild
                 if (!String.IsNullOrEmpty(parsedData2["Image"]["BlockOffset"]))
                     blockoffset = parsedData2["Image"]["BlockOffset"];
                 if (!String.IsNullOrEmpty(parsedData2["Image"]["Copyright"]))
-                    copyright = parsedData2["Image"]["Copyright"];
+                    copyright = parsedData2["Image"]["Copyright"].Replace("\"", "");
                 if (!String.IsNullOrEmpty(parsedData2["ConsoleSpecific"]["2BLPairing"]))
                     perboxpairing = parsedData2["ConsoleSpecific"]["2BLPairing"];
                 if (!String.IsNullOrEmpty(parsedData2["ConsoleSpecific"]["2BLPairing"]))
@@ -197,10 +198,7 @@ namespace RGBuild
                 if (!String.IsNullOrEmpty(parsedData2["Bootloaders"]["7BL"]))
                     _7BL = parsedData2["Bootloaders"]["7BL"];
 
-                foreach (KeyData kd in parsedData2["BadBlocks"])
-                {
-                    badblocks.Add(int.Parse(kd.KeyName, NumberStyles.HexNumber));
-                }
+                badblocks.AddRange(parsedData2["BadBlocks"].Select(kd => int.Parse(kd.KeyName, NumberStyles.HexNumber)));
             }
 
             if(exploitType!="JTAG"){
@@ -229,7 +227,7 @@ namespace RGBuild
             if (!String.IsNullOrEmpty(parsedData["Image"]["BlockOffset"]))
                 blockoffset = parsedData["Image"]["BlockOffset"];
             if (!String.IsNullOrEmpty(parsedData["Image"]["Copyright"]))
-                copyright = parsedData["Image"]["Copyright"];
+                copyright = parsedData["Image"]["Copyright"].Replace("\"", "");
             
 
             if (!String.IsNullOrEmpty(parsedData["Bootloaders"]["2BL"]))
@@ -259,7 +257,7 @@ namespace RGBuild
             if (Arguments.Recognized.ContainsKey("/cpukey"))
                 cpukey = Arguments.Recognized["/cpukey"];
             if (Arguments.Recognized.ContainsKey("/copyright"))
-                copyright = Arguments.Recognized["/copyright"];
+                copyright = Arguments.Recognized["/copyright"].Replace("\"", "");
             if (Arguments.Recognized.ContainsKey("/2bladdr"))
                 addr2bl = Arguments.Recognized["/2bladdr"];
             if (Arguments.Recognized.ContainsKey("/6bladdr"))
@@ -326,7 +324,7 @@ namespace RGBuild
             jtag_payload = jtag_payload.Replace("0x", "");
             jtag_pairing2bl = jtag_pairing2bl.Replace("0x", "");
 
-            uint bl2addr = uint.Parse(addr2bl.Replace("0x", ""),
+            uint bl2Addr = uint.Parse(addr2bl.Replace("0x", ""),
                                           addr2bl.Contains("0x") ? NumberStyles.HexNumber : NumberStyles.Integer);
             uint bl6addr = uint.Parse(addr6bl.Replace("0x", ""),
                                       addr6bl.Contains("0x") ? NumberStyles.HexNumber : NumberStyles.Integer);
@@ -375,7 +373,7 @@ namespace RGBuild
 
                 //add header
                 jtagchain.CreateHeader();
-                jtagchain.Header.Entrypoint = bl2addr;
+                jtagchain.Header.Entrypoint = bl2Addr;
                 jtagchain.Header.Size = bl6addr;
                 jtagchain.Header.SysUpdateAddress = bl6addr;
                 if (!String.IsNullOrEmpty(copyright))
@@ -436,7 +434,7 @@ namespace RGBuild
 
                 Console.WriteLine("Saving bootloaders");
 
-                jtagchain.SaveBootloaders(bl2addr, bl6addr);
+                jtagchain.SaveBootloaders(bl2Addr, bl6addr);
 
                 byte[] bl2Data = bl2.GetData(false);
                 byte[] bl4Data = bl4.GetData(false);
@@ -478,13 +476,13 @@ namespace RGBuild
                 _7BL = parsedData[consoleType]["7BL"];
             }
 
-            if (Image == null || Image.IO == null)
+            if (image == null || image.IO == null)
             {
 
-                if (Image == null)
-                    Image = new NANDImage();
+                if (image == null)
+                    image = new NANDImage();
                 if (!String.IsNullOrEmpty(cpukey))
-                    Image.CPUKey = Shared.HexStringToBytes(cpukey.Replace("0x", ""));
+                    image.CPUKey = Shared.HexStringToBytes(cpukey.Replace("0x", ""));
                 //Image._1BLKey = dialog.BLKey;
                 NANDImageStream stream =
                     new NANDImageStream(new MemoryStream(new byte[int.Parse(blockcount, NumberStyles.HexNumber) * 0x4200]), 0x200);
@@ -492,24 +490,24 @@ namespace RGBuild
                 stream.SpareDataType = (SpareDataType)Enum.Parse(typeof(SpareDataType), sparetype);
                 Console.WriteLine("NAND SpareDataType: " + stream.SpareDataType.ToString());
 
-                Image.IO = new X360IO(stream, true);
-                Image.CreateHeader();
-                Image.Header.Entrypoint = bl2addr;
-                Image.Header.Size = bl6addr;
-                Image.Header.SysUpdateAddress = bl6addr;
+                image.IO = new X360IO(stream, true);
+                image.CreateHeader();
+                image.Header.Entrypoint = bl2Addr;
+                image.Header.Size = bl6addr;
+                image.Header.SysUpdateAddress = bl6addr;
                 if (!String.IsNullOrEmpty(copyright))
-                    Image.Header.Copyright = copyright;
+                    image.Header.Copyright = copyright;
             }
 
-            ((NANDImageStream)Image.IO.Stream).badblocks = badblocks;
+            ((NANDImageStream)image.IO.Stream).badblocks = badblocks;
 
             if (SMCdata != null)
             {
 
-                if (Image.SMC == null)
-                    Image.SMC = new SMC(Image.IO);
+                if (image.SMC == null)
+                    image.SMC = new SMC(image.IO);
 
-                Image.SMC.SetData(SMCdata);
+                image.SMC.SetData(SMCdata);
             }
 
             if (!String.IsNullOrEmpty(kv))
@@ -521,10 +519,10 @@ namespace RGBuild
                 }
                 byte[] data2 = new byte[0x3ff0];
                 Array.Copy(data, data.Length == 0x4000 ? 0x10 : 0x0, data2, 0, 0x3ff0);
-                if (Image.KeyVault == null)
-                    Image.KeyVault = new KeyVault(Image.IO, Image.CPUKey);
+                if (image.KeyVault == null)
+                    image.KeyVault = new KeyVault(image.IO, image.CPUKey);
 
-                Image.KeyVault.SetData(data);
+                image.KeyVault.SetData(data);
             }
             string ret;
             if (!String.IsNullOrEmpty(_2BL))
@@ -532,20 +530,20 @@ namespace RGBuild
                 string[] split = _2BL.Split(new[] { ":" }, StringSplitOptions.None);
                 foreach (string str in split)
                 {
-                    ret = Image.AddBootloaderFromPath(Path.Combine(path, str));
+                    ret = image.AddBootloaderFromPath(Path.Combine(path, str));
                     if (!String.IsNullOrEmpty(ret))
                         return ret;
                 }
             }
             if (!String.IsNullOrEmpty(_3BL))
             {
-                ret = Image.AddBootloaderFromPath(Path.Combine(path, _3BL));
+                ret = image.AddBootloaderFromPath(Path.Combine(path, _3BL));
                 if (!String.IsNullOrEmpty(ret))
                     return ret;
             }
             if (!String.IsNullOrEmpty(_4BL))
             {
-                ret = Image.AddBootloaderFromPath(Path.Combine(path, _4BL));
+                ret = image.AddBootloaderFromPath(Path.Combine(path, _4BL));
                 if (!String.IsNullOrEmpty(ret))
                     return ret;
             }
@@ -553,7 +551,7 @@ namespace RGBuild
             {
                 try
                 {
-                    ret = Image.AddBootloaderFromPath(Path.Combine(path, _5BL));
+                    ret = image.AddBootloaderFromPath(Path.Combine(path, _5BL));
 
                     if (!String.IsNullOrEmpty(ret))
                         return ret;
@@ -566,21 +564,21 @@ namespace RGBuild
             }
             if (!String.IsNullOrEmpty(_6BL))
             {
-                ret = Image.AddBootloaderFromPath(Path.Combine(path, _6BL));
+                ret = image.AddBootloaderFromPath(Path.Combine(path, _6BL));
 
                 if (!String.IsNullOrEmpty(ret))
                     return ret;
             }
             if (!String.IsNullOrEmpty(_7BL))
             {
-                ret = Image.AddBootloaderFromPath(Path.Combine(path, _7BL));
+                ret = image.AddBootloaderFromPath(Path.Combine(path, _7BL));
                 if (!String.IsNullOrEmpty(ret))
                     return ret;
             }
 
-            Image.CreateFileSystem();
+            image.CreateFileSystem();
             //Image.CurrentFileSystem.BlockOffset = ushort.Parse(pagesperblock, NumberStyles.HexNumber);
-            Image.CurrentFileSystem.BlockOffset = ushort.Parse(blockoffset, NumberStyles.HexNumber);
+            image.CurrentFileSystem.BlockOffset = ushort.Parse(blockoffset, NumberStyles.HexNumber);
 
             foreach (KeyData kd in parsedData["Files"])
             {
@@ -589,7 +587,7 @@ namespace RGBuild
                     if (File.Exists(Path.Combine(path, "files\\" + kd.Value)))
                     {
 
-                        FileSystemEntry ent = Image.CurrentFileSystem.AddNewEntry(kd.Value, false);
+                        FileSystemEntry ent = image.CurrentFileSystem.AddNewEntry(kd.Value, false);
                         ent.SetData(File.ReadAllBytes(Path.Combine(path, "files\\" + kd.Value)));
                         if (File.Exists(Path.Combine(path, "files\\" + kd.Value + ".meta")))
                         {
@@ -611,24 +609,24 @@ namespace RGBuild
             {
                 string[] dat = kd.KeyName.Split(new[] { ":" }, StringSplitOptions.None);
                 dat[0] = dat[0].Replace("0x", "");
-                Image.AddPayload(kd.Value, uint.Parse(dat[0], NumberStyles.HexNumber), File.ReadAllBytes(Path.Combine(path, dat[1])));
+                image.AddPayload(kd.Value, uint.Parse(dat[0], NumberStyles.HexNumber), File.ReadAllBytes(Path.Combine(path, dat[1])));
             }
 
             if (!String.IsNullOrEmpty(mobileb))
             {
-                Image.AddMobileFile(File.ReadAllBytes(Path.Combine(path, mobileb)), FileSystemExEntries.MobileB);
+                image.AddMobileFile(File.ReadAllBytes(Path.Combine(path, mobileb)), FileSystemExEntries.MobileB);
             }
             if (!String.IsNullOrEmpty(mobilec))
             {
-                Image.AddMobileFile(File.ReadAllBytes(Path.Combine(path, mobilec)), FileSystemExEntries.MobileC);
+                image.AddMobileFile(File.ReadAllBytes(Path.Combine(path, mobilec)), FileSystemExEntries.MobileC);
             }
             if (!String.IsNullOrEmpty(mobilee))
             {
-                Image.AddMobileFile(File.ReadAllBytes(Path.Combine(path, mobilee)), FileSystemExEntries.MobileE);
+                image.AddMobileFile(File.ReadAllBytes(Path.Combine(path, mobilee)), FileSystemExEntries.MobileE);
             }
             if (!String.IsNullOrEmpty(mobilej))
             {
-                Image.AddMobileFile(File.ReadAllBytes(Path.Combine(path, mobilej)), FileSystemExEntries.MobileJ);
+                image.AddMobileFile(File.ReadAllBytes(Path.Combine(path, mobilej)), FileSystemExEntries.MobileJ);
             }
             if (!String.IsNullOrEmpty(smcconfig))
             {
@@ -637,35 +635,35 @@ namespace RGBuild
                 {
                     return "SMC config is incorrect size.";
                 }
-                Image.ConfigBlock = data;
+                image.ConfigBlock = data;
             }
-            if (Image.Bootloaders.Count > 1)
+            if (image.Bootloaders.Count > 1)
             {
 
                 int bl2idx = 1;
-                if (Image.Bootloaders.Count > bl2idx &&
-                    Image.Bootloaders[bl2idx + 1].GetType() == typeof(Bootloader2BL))
+                if (image.Bootloaders.Count > bl2idx &&
+                    image.Bootloaders[bl2idx + 1].GetType() == typeof(Bootloader2BL))
                     bl2idx++;
 
-                for (int blI = Image.Bootloaders.Count - 1; blI >= 0 ; blI--)
+                for (int blI = image.Bootloaders.Count - 1; blI >= 0 ; blI--)
                 {
-                    if (Image.Bootloaders[blI].GetType() == typeof(Bootloader2BL))
+                    if (image.Bootloaders[blI].GetType() == typeof(Bootloader2BL))
                     {
                         ;
 
                         if (!String.IsNullOrEmpty(pairing2bl))
                         {
-                            ((Bootloader2BL)Image.Bootloaders[blI]).PerBoxData.PairingData = new byte[]
+                            ((Bootloader2BL)image.Bootloaders[blI]).PerBoxData.PairingData = new byte[]
                                                      {
                                                          byte.Parse(pairing2bl.Substring(0, 2), NumberStyles.HexNumber),
                                                          byte.Parse(pairing2bl.Substring(2, 2), NumberStyles.HexNumber),
                                                          byte.Parse(pairing2bl.Substring(4, 2), NumberStyles.HexNumber)
                                                      };
 
-                            if ((((Bootloader2BL)Image.Bootloaders[blI]).PerBoxData.PairingData[0] | ((Bootloader2BL)Image.Bootloaders[blI]).PerBoxData.PairingData[1] | ((Bootloader2BL)Image.Bootloaders[blI]).PerBoxData.PairingData[2]) == 0)
+                            if ((((Bootloader2BL)image.Bootloaders[blI]).PerBoxData.PairingData[0] | ((Bootloader2BL)image.Bootloaders[blI]).PerBoxData.PairingData[1] | ((Bootloader2BL)image.Bootloaders[blI]).PerBoxData.PairingData[2]) == 0)
                             {
-                                Console.WriteLine(" *** Zero pairing image");
-                                ((Bootloader2BL)Image.Bootloaders[blI]).PerBoxData.PerBoxDigest = new byte[0x10] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+                                Console.WriteLine("*** Zero pairing image");
+                                ((Bootloader2BL)image.Bootloaders[blI]).PerBoxData.PerBoxDigest = new byte[0x10] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
                             }
                         }
 
@@ -675,10 +673,10 @@ namespace RGBuild
                 
                 
             }
-            if (Image.Bootloaders.Count > 4)
+            if (image.Bootloaders.Count > 4)
             {
 
-                Bootloader6BL bl6 = (Bootloader6BL)Image.Bootloaders.Find(s => s.GetType() == typeof(Bootloader6BL));
+                Bootloader6BL bl6 = (Bootloader6BL)image.Bootloaders.Find(s => s.GetType() == typeof(Bootloader6BL));
                 if (!String.IsNullOrEmpty(pairing6bl) && bl6 != null)
                 {
                     bl6.PerBoxData.PairingData = new byte[]
@@ -709,7 +707,7 @@ namespace RGBuild
                 if (jtagchaindata != null)
                 {
                     Console.WriteLine("Adding second jtag bootloader chain to image at 0x" + jtag_bldrLoc);
-                    Image.AddPayload("Jtag Bootchain", uint.Parse(jtag_bldrLoc, NumberStyles.HexNumber), jtagchaindata);
+                    image.AddPayload("Jtag Bootchain", uint.Parse(jtag_bldrLoc, NumberStyles.HexNumber), jtagchaindata);
                 }
                 string jtag_payload_path = Path.Combine(path, jtag_payload);
 
@@ -720,15 +718,15 @@ namespace RGBuild
                     uint jtagpayloadoffset = 0x200;
 
                     Console.WriteLine("Adding jtag payload to image");
-                    Image.AddPayload("Jtag Payload", jtagpayloadoffset, File.ReadAllBytes(jtag_payload_path));
+                    image.AddPayload("Jtag Payload", jtagpayloadoffset, File.ReadAllBytes(jtag_payload_path));
 
-                    ISpareData edc = (ISpareData)((NANDImageStream)Image.IO.Stream).GetPageSpare(pagenumber);
+                    ISpareData edc = (ISpareData)((NANDImageStream)image.IO.Stream).GetPageSpare(pagenumber);
                     //SpareDataSmallBlock edc = (SpareDataSmallBlock)((NANDImageStream)Image.IO.Stream).GetPageSpare(pagenumber);
 
 
                     //Console.WriteLine("Parsing data: " + jtag_syscall);
                     edc._unused1 = (short)uint.Parse(jtag_syscall, NumberStyles.HexNumber);
-                    ((NANDImageStream)Image.IO.Stream).WritePageSpare(pagenumber, edc);
+                    ((NANDImageStream)image.IO.Stream).WritePageSpare(pagenumber, edc);
                 }
                 else PrintError("Unable to load jtag payload at: " + jtag_payload_path);
 
@@ -751,7 +749,7 @@ namespace RGBuild
             Console.WriteLine("        \\_____________\\____\\_///||\\\\\\__________/________/");
             Console.WriteLine("     __________________________/  \\__________________________");
             Console.WriteLine("    /               - RESET GLITCH LOADER-DEV - "+RGversion+"        \\");
-            Console.WriteLine(" __/                      RGBuild "+version+"                        \\___");
+            Console.WriteLine(" __/                      RGBuild "+Version+"                        \\___");
             Console.WriteLine("   \\          by stoker25, tydye81 & #RGLoader@EFnet          /");
             Console.WriteLine("    \\________________________________________________________/");
 
@@ -792,7 +790,16 @@ namespace RGBuild
 
             return null;
         }
-
+        public static bool copyFile(string source, string dest)
+        {
+            if (!File.Exists(source))
+                return false;
+            File.Copy(source, dest, true);
+            if (!File.Exists(source + ".meta"))
+                return true;
+            File.Copy(source + ".meta", dest + ".meta", true);
+            return true;
+        }
         public static bool copyDir(string source, string dest)
         {
             if (!System.IO.Directory.Exists(dest)) System.IO.Directory.CreateDirectory(dest);
@@ -817,7 +824,8 @@ namespace RGBuild
         {
             
                 // determine what to extract
-
+            if (!Directory.Exists(folder))
+                Directory.CreateDirectory(folder);
             foreach (char i in types)
             {
                 if (i == 'b') // extract bootloaders
@@ -1231,10 +1239,6 @@ namespace RGBuild
                     while (buildVer == "")
                     {
                         Console.WriteLine("\n              Please select the version you want to build    ");
-                        //Console.WriteLine("                          (13599/14699)");
-                        //Console.WriteLine("(1) 13599");
-                        //Console.WriteLine("(2) 14699");
-
                         int i = 1;
                         foreach (ushort ver in Lists.KernelVersions)
                         {
@@ -1243,8 +1247,6 @@ namespace RGBuild
                         }
 
                         int numSelections = Lists.KernelVersions.Count;
-
-                        //Console.Write("\n=");
                         try
                         {
                             buildVer = Console.ReadLine();
@@ -1329,6 +1331,13 @@ namespace RGBuild
                     //init folders
                     if (!Directory.Exists("..\\tmp")) Directory.CreateDirectory("..\\tmp");
                     if (!Directory.Exists("..\\rls")) Directory.CreateDirectory("..\\rls");
+                    if (!Directory.Exists(LOADERDIR + "\\SMC\\")) Directory.CreateDirectory(LOADERDIR + "\\SMC\\");
+                    if (!Directory.Exists(LOADERDIR + "\\2BL\\")) Directory.CreateDirectory(LOADERDIR + "\\2BL\\");
+                    if (!Directory.Exists(LOADERDIR + "\\3BL\\")) Directory.CreateDirectory(LOADERDIR + "\\3BL\\");
+                    if (!Directory.Exists(LOADERDIR + "\\4BL\\")) Directory.CreateDirectory(LOADERDIR + "\\4BL\\");
+                    if (!Directory.Exists(LOADERDIR + "\\5BL\\")) Directory.CreateDirectory(LOADERDIR + "\\5BL\\");
+                    if (!Directory.Exists(LOADERDIR + "\\6BL\\")) Directory.CreateDirectory(LOADERDIR + "\\6BL\\");
+                    if (!Directory.Exists(LOADERDIR + "\\7BL\\")) Directory.CreateDirectory(LOADERDIR + "\\7BL\\");
 
                     //Open image
                     bool opened = image.OpenImage(file, 0x200);
@@ -1344,24 +1353,46 @@ namespace RGBuild
                         if (bl.GetType() == typeof(Bootloader5BL) && CE == null) CE = bl;
                     }
 
-                    Console.WriteLine("\n *** Extracting data..\n");
+                    Console.WriteLine("\n*** Extracting data..\n");
 
                     //init nand data dir & extract nand data
                     if (System.IO.Directory.Exists(NANDDATADIR)) System.IO.Directory.Delete(NANDDATADIR, true);
                     System.IO.Directory.CreateDirectory(NANDDATADIR);
                     extractImage(image, "bvfsmi", NANDDATADIR);
                     //calculate crc32 of smc
-                    Console.WriteLine(" *** Calculating SMC crc32\n");
+                    Console.WriteLine("*** Calculating SMC crc32\n");
                     string smc_crc32 = calculate_crc32(NANDDATADIR + "\\SMC_dec.bin", "4");
 
                     //get info
                     string consoleType = getConsoleType(image);
-                    Console.WriteLine(" *** Extraction complete..\n");
+                    Console.WriteLine("*** Extraction complete..\n");
+                    foreach (Bootloader bl in image.Bootloaders)
+                    {
+                        if (bl.GetType() != typeof(Bootloader1BL))
+                        {
+                            string magic = bl.Magic.ToString();
+                            if (bl.GetType() == typeof(Bootloader2BL))
+                            {
+                                magic += "_";
+                                if (((Bootloader2BL)bl).CPUKey == null || ((Bootloader2BL)bl).CPUKey[0] == 0 && ((Bootloader2BL)bl).CPUKey[1] == 0 && ((Bootloader2BL)bl).CPUKey[2] == 0 && ((Bootloader2BL)bl).CPUKey[3] == 0)
+                                    magic += "A";
+                                else
+                                    magic += "B";
+                            }
+                            if(!File.Exists(LOADERDIR + "\\" + (bl.GetType().Name.Replace("Bootloader", "")) + "\\" + magic + "." + bl.Build.ToString() + ".bin"))
+                            {
+                                Console.WriteLine("* Moving " + magic + " (ver " + bl.Build + ") to loaders directory");
+                                File.Copy(Path.Combine(NANDDATADIR, magic + "." + bl.Build.ToString() + ".bin"),
+                                          Path.Combine(LOADERDIR + "\\" + (bl.GetType().Name.Replace("Bootloader", "")) +
+                                                       "\\" + magic + "." + bl.Build.ToString() + ".bin"), true);
+                            }
 
+                        }
+                    }
 
-                    //File.Copy(NANDDATADIR + "\\CB_A." + CB.Build + ".bin", LOADERDIR + "\\2BL\\CB_A." + CB.Build + ".bin", true);
-                    //File.Copy(NANDDATADIR + "\\CD." + CD.Build + ".bin", LOADERDIR + "\\4BL\\CD." + CD.Build + ".bin", true);
-                    //File.Copy(NANDDATADIR + "\\" + CE.Magic + "." + CE.Build + ".bin", LOADERDIR + "\\5BL\\" + CE.Magic + "." + CE.Build + ".bin", true);
+                    File.Copy(NANDDATADIR + "\\CB_A." + CB.Build + ".bin", LOADERDIR + "\\2BL\\CB_A." + CB.Build + ".bin", true);
+                    File.Copy(NANDDATADIR + "\\CD." + CD.Build + ".bin", LOADERDIR + "\\4BL\\CD." + CD.Build + ".bin", true);
+                    File.Copy(NANDDATADIR + "\\" + CE.Magic + "." + CE.Build + ".bin", LOADERDIR + "\\5BL\\" + CE.Magic + "." + CE.Build + ".bin", true);
 
                     if (exploitType == "JTAG" && !Lists.JTAG_CB.Contains(CB.Build))
                     {
@@ -1435,6 +1466,7 @@ namespace RGBuild
                     //init builds folder & copy default files
                     if (System.IO.Directory.Exists(buildDir)) System.IO.Directory.Delete(buildDir, true);
                     System.IO.Directory.CreateDirectory(buildDir);
+                    System.IO.Directory.CreateDirectory(buildDir);
 
                     if (consoleType == "Trinity" || consoleType == "Corona") buildINI = slimINI;
                     else if (exploitType == "JTAG") buildINI = jtagINI;
@@ -1466,7 +1498,7 @@ namespace RGBuild
                         xellBin = "xell-2f.bin";
                         xellPath = "..\\" + xellBin;
 
-                        Console.WriteLine("\n *** Copying jtag bootloaders");
+                        Console.WriteLine("\n*** Copying jtag bootloaders");
                         string jtag2BL = "";
                         string jtag2BL_hacked = "";
                         string jtag4BL = "";
@@ -1544,7 +1576,7 @@ namespace RGBuild
 
                             if (File.Exists("..\\tmp" + "\\SMC." + smc_crc32 + ".bin.new")) File.Delete("..\\tmp" + "\\SMC." + smc_crc32 + ".bin.new");
 
-                            Console.WriteLine("\n *** Patching SMC " + smc_crc32 + "...");
+                            Console.WriteLine("\n*** Patching SMC " + smc_crc32 + "...");
                             {
 
                                 ProcessStartInfo pInfo = new ProcessStartInfo();
@@ -1566,7 +1598,7 @@ namespace RGBuild
                                 File.Copy(patchedsmc, RLSDIR + "\\SMC." + smc_crc32 + "_new.bin", true);
                                 File.Copy(patchedsmc, buildDir + "\\SMC_dec.bin", true);
                                 SMCpatched = true;
-                                Console.WriteLine(" *** SMC Patch completed!");
+                                Console.WriteLine("*** SMC Patch completed!");
                             }
                         }
 
@@ -1575,7 +1607,7 @@ namespace RGBuild
                     //Copy devkit SE
                     {
                         string CEloc = LOADERDIR + "\\5BL\\SE." + buildVer + ".bin";
-                        Console.WriteLine("\n *** Adding CE " + buildVer);
+                        Console.WriteLine("\n*** Adding CE " + buildVer);
                         if (!File.Exists(CEloc))
                         {
                             PrintError("\n\nUnable to find compressed kernel (CE/SE) for " + buildVer + "! \nMake sure its located at " + CEloc);
@@ -1587,7 +1619,7 @@ namespace RGBuild
                     //Copy xell binary to builds
                     if (File.Exists(xellPath))
                     {
-                        Console.WriteLine("\n *** Adding xell binary");
+                        Console.WriteLine("\n*** Adding xell binary");
                         File.Copy(xellPath, buildDir + "\\" + xellBin);
                     }
                     else
@@ -1605,7 +1637,7 @@ namespace RGBuild
                             }
                             else
                             {
-                                Console.WriteLine("\n *** Copying filesystem files from " + FSfileloc);
+                                Console.WriteLine("\n*** Copying filesystem files from " + FSfileloc);
                                 copyDir(FSfileloc, buildDir + "\\files");
                             }
                         }
@@ -1615,16 +1647,14 @@ namespace RGBuild
                         File.Copy(NANDDATADIR + "\\KV_dec.bin", buildDir + "\\KV_dec.bin", true);
 
                         //copy mobiledata
-                        if (File.Exists(NANDDATADIR + "\\MobileB.bin")) File.Copy(NANDDATADIR + "\\MobileB.bin", buildDir + "\\MobileB.bin", true);
-                        if (File.Exists(NANDDATADIR + "\\MobileC.bin")) File.Copy(NANDDATADIR + "\\MobileC.bin", buildDir + "\\MobileC.bin", true);
-                        if (File.Exists(NANDDATADIR + "\\MobileE.bin")) File.Copy(NANDDATADIR + "\\MobileE.bin", buildDir + "\\MobileE.bin", true);
-                        if (File.Exists(NANDDATADIR + "\\MobileJ.bin")) File.Copy(NANDDATADIR + "\\MobileJ.bin", buildDir + "\\MobileJ.bin", true);
-
+                        copyFile(NANDDATADIR + "\\MobileB.bin", buildDir + "\\MobileB.bin");
+                        copyFile(NANDDATADIR + "\\MobileC.bin", buildDir + "\\MobileC.bin");
+                        copyFile(NANDDATADIR + "\\MobileE.bin", buildDir + "\\MobileE.bin");
+                        copyFile(NANDDATADIR + "\\MobileJ.bin", buildDir + "\\MobileJ.bin");
 
                         //copy filesystem files
-                        if (File.Exists(NANDDATADIR + "\\files\\crl.bin")) File.Copy(NANDDATADIR + "\\files\\crl.bin", buildDir + "\\files\\crl.bin", true);
-                        if (File.Exists(NANDDATADIR + "\\files\\fcrt.bin")) File.Copy(NANDDATADIR + "\\files\\fcrt.bin", buildDir + "\\files\\fcrt.bin", true);
-                        else
+                        copyFile(NANDDATADIR + "\\files\\crl.bin", buildDir + "\\files\\crl.bin");
+                        if (!copyFile(NANDDATADIR + "\\files\\fcrt.bin", buildDir + "\\files\\fcrt.bin"))
                         {
                             if ((consoleType == "Trinity" || consoleType == "Corona") && !extraPatches.Contains("NOFCRT"))
                             {
@@ -1632,9 +1662,9 @@ namespace RGBuild
                                 extraPatches.Add("NOFCRT");
                             }
                         }
-                        if (File.Exists(NANDDATADIR + "\\files\\dae.bin")) File.Copy(NANDDATADIR + "\\files\\dae.bin", buildDir + "\\files\\dae.bin", true);
-                        if (File.Exists(NANDDATADIR + "\\files\\secdata.bin")) File.Copy(NANDDATADIR + "\\files\\secdata.bin", buildDir + "\\files\\secdata.bin", true);
-                        if (File.Exists(NANDDATADIR + "\\files\\extended.bin")) File.Copy(NANDDATADIR + "\\files\\extended.bin", buildDir + "\\files\\extended.bin", true);
+                        copyFile(NANDDATADIR + "\\files\\dae.bin", buildDir + "\\files\\dae.bin");
+                        copyFile(NANDDATADIR + "\\files\\secdata.bin", buildDir + "\\files\\secdata.bin");
+                        copyFile(NANDDATADIR + "\\files\\extended.bin", buildDir + "\\files\\extended.bin");
 
                         //copy imageinfo ini
                         if (File.Exists(NANDDATADIR + "\\imageinfo.ini")) File.Copy(NANDDATADIR + "\\imageinfo.ini", buildDir + "\\imageinfo.ini", true);
@@ -1650,7 +1680,7 @@ namespace RGBuild
                     //Generate Dummy KV
                     if (generateDummyKV)
                     {
-                        Console.WriteLine("\n *** Generating dummy dev KeyVault");
+                        Console.WriteLine("\n*** Generating dummy dev KeyVault");
                         string dummyKVpath = defaultsDir + "\\KV_generic.bin";
                         if (File.Exists(dummyKVpath))
                         {
@@ -1695,7 +1725,7 @@ namespace RGBuild
                             Console.WriteLine("ERROR: Unable to load dummy_KV file from: " + dummyKVpath);
                         }
                     }
-                    else Console.WriteLine("\n *** NOT Generating dummy dev KeyVault!");
+                    else Console.WriteLine("\n*** NOT Generating dummy dev KeyVault!");
 
 
                     if (exploitType != "JTAG")
@@ -1715,7 +1745,7 @@ namespace RGBuild
                             if (File.Exists(KHVpatchtmp + ".elf")) File.Delete(KHVpatchtmp + ".elf");
 
                             //File.Copy(KHVpatch + ".txt", KHVpatchtmp + ".txt", true);
-                            Console.WriteLine("\n *** Compiling KHV Patches for " + build + "...");
+                            Console.WriteLine("\n*** Compiling KHV Patches for " + build + "...");
 
                             ProcessStartInfo pInfo = new ProcessStartInfo();
                             pInfo.FileName = @xenon_as;
@@ -1744,7 +1774,7 @@ namespace RGBuild
 
                             if (File.Exists(KHVpatchtmp + ".elf")) File.Delete(KHVpatchtmp + ".elf");
 
-                            if (!File.Exists(KHVpatchtmp + ".rglp")) PrintError(KHVpatchtmp + ".rglp did not build, cannot proceed.");
+                            if (!File.Exists(KHVpatchtmp + ".rglp") || File.ReadAllBytes(KHVpatchtmp + ".rglp").Length <= 0) PrintError(KHVpatchtmp + ".rglp did not build, cannot proceed.");
                             else
                             {
                                 if (File.Exists(buildDir + "\\patchset.rglp")) File.Delete(buildDir + "\\patchset.rglp");
@@ -1753,7 +1783,7 @@ namespace RGBuild
                                 File.Move(KHVpatchtmp + ".rglp", RLSDIR + "\\RGLoader-" + build + ".rglp");
                                 File.Copy(RLSDIR + "\\RGLoader-" + build + ".rglp", buildDir + "\\patchset.rglp", true);
 
-                                Console.WriteLine(" *** KHV Patch build completed!");
+                                Console.WriteLine("*** KHV Patch build completed!");
                             }
                         }
 
@@ -1785,7 +1815,7 @@ namespace RGBuild
                                 File.Copy(CBBPatch, patchpath, true);
                                 if (File.Exists(tmpCBB + ".new")) File.Delete(tmpCBB + ".new");
 
-                                Console.WriteLine("\n *** Patching CB_B " + CB.Build + "...");
+                                Console.WriteLine("\n*** Patching CB_B " + CB.Build + "...");
                                 {
 
                                     ProcessStartInfo pInfo = new ProcessStartInfo();
@@ -1807,7 +1837,7 @@ namespace RGBuild
                                 {
                                     File.Copy(patchedCBB, RLSDIR + "\\CB_B." + CB.Build + "_new.bin", true);
                                     File.Copy(patchedCBB, buildDir + "\\" + CBB, true);
-                                    Console.WriteLine(" *** CB_B Patch completed!");
+                                    Console.WriteLine("*** CB_B Patch completed!");
                                 }
                                 CBBPath = buildDir + "\\" + CBB;
                             }
@@ -1839,7 +1869,7 @@ namespace RGBuild
 
                                 if (File.Exists(tmpCD + ".new")) File.Delete(tmpCD + ".new");
 
-                                Console.WriteLine("\n *** Patching 4BL " + CD.Build + "...");
+                                Console.WriteLine("\n*** Patching 4BL " + CD.Build + "...");
                                 {
 
                                     ProcessStartInfo pInfo = new ProcessStartInfo();
@@ -1862,7 +1892,7 @@ namespace RGBuild
                                 {
                                     File.Copy(patchedCD, RLSDIR + "\\CD." + CD.Build + "_new.bin", true);
                                     File.Copy(patchedCD, buildDir + "\\" + _CD, true);
-                                    Console.WriteLine(" *** 4BL Patch completed!");
+                                    Console.WriteLine("*** 4BL Patch completed!");
                                 }
                                 CDPath = buildDir + "\\" + _CD;
                             }
@@ -1870,17 +1900,17 @@ namespace RGBuild
                         //don't compile CD for phats, copy precompiled
                         else if (consoleType == "Falcon" || consoleType == "Xenon" || consoleType == "Zephyr")
                         {
-                            Console.WriteLine("\n *** Using pre-compiled 4bl for " + consoleType);
+                            Console.WriteLine("\n*** Using pre-compiled 4bl for " + consoleType);
                             File.Copy(defaultsDir + "\\CD.8453_falcon.bin", buildDir + "\\CD.8453.bin", true);
                         }
                         else if (consoleType == "Jasper")
                         {
-                            Console.WriteLine("\n *** Using pre-compiled 4bl for " + consoleType);
+                            Console.WriteLine("\n*** Using pre-compiled 4bl for " + consoleType);
                             File.Copy(defaultsDir + "\\CD.8453_jasper.bin", buildDir + "\\CD.8453.bin", true);
                         }
 
                         //Copy CB_A
-                        Console.WriteLine("\n *** Adding CB_A " + CB.Build);
+                        Console.WriteLine("\n*** Adding CB_A " + CB.Build);
                         File.Copy(LOADERDIR + "\\2BL\\CB_A." + CB.Build + ".bin", buildDir + "\\CB_A." + CB.Build + ".bin", true);
                     }
 
@@ -1888,7 +1918,7 @@ namespace RGBuild
 
 
                     //Create image
-                    Console.WriteLine("\n *** Compiling NAND image!");
+                    Console.WriteLine("\n*** Compiling NAND image!");
 
                     
 
@@ -1925,10 +1955,10 @@ namespace RGBuild
                     Console.WriteLine("SMC: " + smc_crc32 + ((SMCpatched) ? "" : "   (unable to patch)"));
                     Console.WriteLine("Exploit: " + exploitType);
                     Console.WriteLine("-------------------------------------------------------");
-                    Console.WriteLine(" *** Image created at: " + outputFile);
+                    Console.WriteLine("*** Image created at: " + outputFile);
 
                     Console.WriteLine("\nFlash image to nand using any NAND writing tool.");
-                    Console.WriteLine(" *** Enjoy :) ");
+                    Console.WriteLine("*** Enjoy :) ");
 
                     if (Arguments.Recognized.ContainsKey("/kernel") && Arguments.Recognized.ContainsKey("/hack"))
                     {
