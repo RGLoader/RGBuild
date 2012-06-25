@@ -25,6 +25,6 @@ if [ ! -n "$desc" ]
 then
     git commit
 else
-    git commit -m \""$desc"\"
+    git commit -m "$desc"
 fi
 git push -u origin master
