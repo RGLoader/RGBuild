@@ -570,13 +570,15 @@ namespace RGBuild.IO
             {
                 // scan image for bad blocks and remap them in memory
                 badblocks.Clear();
-                for (int i = 0; i < BadBlockAreaStart; i++)
+                for (int i = 0; i < BlockCount; i++)
                 {
                     ISpareData spare = GetBigBlockSpare(i);
 
                     if (spare != null && spare.BadBlock)
                     {
-                        for (int y = BadBlockAreaStart; y < BlockCount; y++)
+                        badblocks.Add(i);
+                        if(i<BadBlockAreaStart)
+                            for (int y = BadBlockAreaStart; y < BlockCount; y++)
                         {
                             ISpareData spare2 = GetBigBlockSpare(y);
                             if (spare2.BlockId == i)
@@ -586,7 +588,7 @@ namespace RGBuild.IO
                                 _dataStream.Read(goodblock, 0, (int)BigBlockLength);
                                 SeekToBlock(i);
                                 _dataStream.Write(goodblock, 0, (int)BigBlockLength);
-                                badblocks.Add(i);
+                                
                             }
                         }
                     }
@@ -787,19 +789,30 @@ namespace RGBuild.IO
                 {
                     if (i < BadBlockAreaStart)
                     {
+                        
                         ISpareData spare = GetBigBlockSpare(i);
                         Console.WriteLine("Remapping bad block "+i.ToString("X"));
                         int remappedBlock = BlockCount - (curBadBlock + 1);
+
+                        byte[] blank = new byte[BigBlockLengthECC];
+                        for (int b = 0; b < BigBlockLengthECC; b++) blank[b] = 0x00;
+
+                        while (badblocks.Contains(remappedBlock) && curBadBlock < 32)
+                        {
+
+                            _imageStream.Position = (remappedBlock * PagesPerBigBlock * (PageLength + 0x10));
+                            _imageStream.Write(blank, 0, (int)BigBlockLengthECC);
+
+                            curBadBlock++;
+                            remappedBlock--;
+                        }
                         
                         //copy bad block
                         _imageStream.Position = (i * PagesPerBigBlock * (PageLength + 0x10));
                         byte[] badblock = new byte[BigBlockLengthECC];
                         _imageStream.Read(badblock, 0, (int)BigBlockLengthECC);
 
-
                         //wipe old spot
-                        byte[] blank = new byte[BigBlockLengthECC];
-                        for (int b = 0; b < BigBlockLengthECC; b++) blank[b] = 0xFF;
                         _imageStream.Position = (i * PagesPerBigBlock * (PageLength + 0x10));
                         _imageStream.Write(blank, 0, (int)BigBlockLengthECC);
 

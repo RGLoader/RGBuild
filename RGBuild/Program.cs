@@ -19,7 +19,7 @@ namespace RGBuild
     {
        
 
-        public const string Version = "3.61";
+        public const string Version = "3.64";
         public const string RGversion = "0v295";
 
         private static readonly string[] CmdLineOptions = new[] { 

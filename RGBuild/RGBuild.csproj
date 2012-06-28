@@ -97,12 +97,6 @@
     <Compile Include="Dialogs\KeyManagerDialog.Designer.cs">
       <DependentUpon>KeyManagerDialog.cs</DependentUpon>
     </Compile>
-    <Compile Include="setup.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="setup.Designer.cs">
-      <DependentUpon>setup.cs</DependentUpon>
-    </Compile>
     <Compile Include="ThirdParty\ListViewColumnSorter.cs" />
     <Compile Include="Main.cs">
       <SubType>Form</SubType>
@@ -177,9 +171,6 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
-    <EmbeddedResource Include="setup.resx">
-      <DependentUpon>setup.cs</DependentUpon>
-    </EmbeddedResource>
     <None Include="app.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
