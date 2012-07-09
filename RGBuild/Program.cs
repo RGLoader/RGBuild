@@ -19,8 +19,8 @@ namespace RGBuild
     {
        
 
-        public const string Version = "3.64";
-        public const string RGversion = "0v295";
+        public const string Version = "3.7";
+        public const string RGversion = "0v300";
 
         private static readonly string[] CmdLineOptions = new[] { 
             "/guided", "/banner", "/crc32", 
@@ -103,6 +103,8 @@ namespace RGBuild
             string pairing6bl = "0x000000";
             string ldv2bl = "0x0";
             string ldv6bl = "0x0";
+            string SMC_size = "0x3000";
+            string SMC_location = "0x1000";
             string blockoffset = "0x0";
             string smc = "smc.bin";
             string smcconfig = "smc_config.bin";
@@ -151,6 +153,11 @@ namespace RGBuild
                     addr2bl = parsedData2["Image"]["2BLAddress"];
                 if (!String.IsNullOrEmpty(parsedData2["Image"]["6BLAddress"]))
                     addr6bl = parsedData2["Image"]["6BLAddress"];
+                if (!String.IsNullOrEmpty(parsedData2["Image"]["SMCSize"]))
+                    SMC_size = parsedData2["Image"]["SMCSize"];
+                if (!String.IsNullOrEmpty(parsedData2["Image"]["SMCLocation"]))
+                    SMC_location = parsedData2["Image"]["SMCLocation"];
+
                 if (!String.IsNullOrEmpty(parsedData2["Image"]["BlockCount"]))
                     blockcount = parsedData2["Image"]["BlockCount"];
                 if (!String.IsNullOrEmpty(parsedData2["Image"]["BlockOffset"]))
@@ -222,6 +229,10 @@ namespace RGBuild
                 addr2bl = parsedData["Image"]["2BLAddress"];
             if (!String.IsNullOrEmpty(parsedData["Image"]["6BLAddress"]))
                 addr6bl = parsedData["Image"]["6BLAddress"];
+            if (!String.IsNullOrEmpty(parsedData["Image"]["SMCSize"]))
+                SMC_size = parsedData["Image"]["SMCSize"];
+            if (!String.IsNullOrEmpty(parsedData["Image"]["SMCLocation"]))
+                SMC_location = parsedData["Image"]["SMCLocation"];
             if (!String.IsNullOrEmpty(parsedData["Image"]["BlockCount"]))
                 blockcount = parsedData["Image"]["BlockCount"];
             if (!String.IsNullOrEmpty(parsedData["Image"]["BlockOffset"]))
@@ -338,7 +349,7 @@ namespace RGBuild
             {
 
                 byte[] data = File.ReadAllBytes(Path.Combine(path, smc));
-                if (data.Length < 0x3000)
+                if (data.Length < 0x3000 || data.Length > 0x4000)
                 {
                     return "SMC is incorrect size: 0x" + data.Length.ToString("X");
                 }
@@ -495,6 +506,22 @@ namespace RGBuild
                 image.Header.Entrypoint = bl2Addr;
                 image.Header.Size = bl6addr;
                 image.Header.SysUpdateAddress = bl6addr;
+
+                {
+                    SMC_location = SMC_location.Replace("0x", "");
+                    if (SMC_location.Length % 2 != 0) SMC_location = "0" + SMC_location;
+                    SMC_size = SMC_size.Replace("0x", "");
+                    if (SMC_size.Length % 2 != 0) SMC_size = "0" + SMC_size;
+
+                    byte[] smcbytes=Shared.HexStringToBytes(SMC_location);
+                    Array.Reverse(smcbytes, 0, 2);
+                    image.Header.SmcAddress = (uint)BitConverter.ToInt16(smcbytes, 0);
+
+                    smcbytes = Shared.HexStringToBytes(SMC_size);
+                    Array.Reverse(smcbytes, 0, 2);
+                    image.Header.SmcSize = (uint)BitConverter.ToInt16(smcbytes, 0);
+                }
+
                 if (!String.IsNullOrEmpty(copyright))
                     image.Header.Copyright = copyright;
             }
@@ -881,6 +908,8 @@ namespace RGBuild
                     ini.AppendLine("CPUKey = " + Shared.BytesToHexString(image.CPUKey, ""));
                     ini.AppendLine("2BLAddress = 0x" + image.Header.Entrypoint.ToString("X"));
                     ini.AppendLine("6BLAddress = 0x" + image.Header.SysUpdateAddress.ToString("X"));
+                    ini.AppendLine("SMCSize = 0x" + image.Header.SmcSize.ToString("X"));
+                    ini.AppendLine("SMCLocation = 0x" + image.Header.SmcAddress.ToString("X"));
                     ini.AppendLine("Copyright = \"" + image.Header.Copyright + "\"");
                     ini.AppendLine("PagesPerBlock = 0x" + ((NANDImageStream)image.IO.Stream).PagesPerBigBlock.ToString("X"));
                     ini.AppendLine("SpareDataType = " + ((NANDImageStream)image.IO.Stream).SpareDataType.ToString());
@@ -909,7 +938,6 @@ namespace RGBuild
                     ini.AppendLine("2BLPairing = 0x" + Shared.BytesToHexString(bl2.PerBoxData.PairingData, ""));
                     ini.AppendLine("2BLLDV = 0x" + bl2.PerBoxData.LockDownValue.ToString("X"));
 
-                    // TODO: 6blpairing
                     ini.AppendLine("6BLPairing = 0x"+ ((bl6!=null)?(Shared.BytesToHexString(bl6.PerBoxData.PairingData, "")):"000000"));
                     ini.AppendLine("6BLLDV = 0x" + ((bl6!=null)?(bl6.PerBoxData.LockDownValue.ToString("X")):"00"));
                     ini.AppendLine("SMC = SMC_dec.bin");
@@ -1462,6 +1490,7 @@ namespace RGBuild
                             }
                         }
                     }
+                   
 
                     //init builds folder & copy default files
                     if (System.IO.Directory.Exists(buildDir)) System.IO.Directory.Delete(buildDir, true);
@@ -1560,48 +1589,26 @@ namespace RGBuild
                         else smc_patch += smc_crc32 + ".txt";
 
                         File.Copy(NANDDATADIR + "\\smc_dec.bin", LOADERDIR + "\\SMC\\SMC." + smc_crc32 + ".bin", true);
-                        File.Copy(NANDDATADIR + "\\smc_dec.bin", tmpsmc, true);
-
-                        if (!File.Exists(smc_patch))
+                        
+                        byte[] SMC_data = File.ReadAllBytes(NANDDATADIR + "\\smc_dec.bin");
+                        for (int i = 0; i < SMC_data.Length - 8; i++)
                         {
-                            Console.WriteLine("ERROR: Unable to find patches for SMC " + smc_crc32);
-                            File.Copy(NANDDATADIR + "\\smc_dec.bin", buildDir + "\\SMC_dec.bin", true);
-                        }
-                        else
-                        {
-
-                            string patchpath = "..\\tmp\\" + smc_crc32 + ".txt";
-
-                            File.Copy(smc_patch, patchpath, true);
-
-                            if (File.Exists("..\\tmp" + "\\SMC." + smc_crc32 + ".bin.new")) File.Delete("..\\tmp" + "\\SMC." + smc_crc32 + ".bin.new");
-
-                            Console.WriteLine("\n*** Patching SMC " + smc_crc32 + "...");
+                            if (SMC_data[i] == 0x05)
                             {
-
-                                ProcessStartInfo pInfo = new ProcessStartInfo();
-                                pInfo.FileName = @loaderpatchpath;
-                                pInfo.Arguments = " " + patchpath + " " + tmpsmc + " /SMC";
-                                pInfo.CreateNoWindow = false;
-                                pInfo.UseShellExecute = false;
-                                System.Diagnostics.Process patcher = Process.Start(pInfo);
-                                patcher.WaitForExit();
-                            }
-
-                            string patchedsmc = "..\\tmp\\SMC." + smc_crc32 + ".bin.new";
-                            if (!File.Exists(patchedsmc))
-                            {
-                                PrintError("Unable to patch SMC " + smc_crc32);
-                            }
-                            else
-                            {
-                                File.Copy(patchedsmc, RLSDIR + "\\SMC." + smc_crc32 + "_new.bin", true);
-                                File.Copy(patchedsmc, buildDir + "\\SMC_dec.bin", true);
-                                SMCpatched = true;
-                                Console.WriteLine("*** SMC Patch completed!");
+                                if (SMC_data[i + 2] == 0xE5 && SMC_data[i + 4] == 0xB4 && SMC_data[i + 5] == 0x05)
+                                {
+                                    SMCpatched = true;
+                                    SMC_data[i] = 0;
+                                    SMC_data[i + 1] = 0;
+                                }
                             }
                         }
 
+                        File.WriteAllBytes(buildDir + "\\SMC_dec.bin", SMC_data);
+
+                        if (!SMCpatched) Console.WriteLine("   ERROR: Unable to patch this SMC");
+                        else Console.WriteLine("*** SMC Patch completed!");
+                            
                     }//~patch SMC
 
                     //Copy devkit SE
@@ -1952,7 +1959,7 @@ namespace RGBuild
 
                     Console.WriteLine("CB: " + CB.Build);
                     Console.WriteLine("CD: " + CD.Build);
-                    Console.WriteLine("SMC: " + smc_crc32 + ((SMCpatched) ? "" : "   (unable to patch)"));
+                    Console.WriteLine("SMC: " + smc_crc32 + ((SMCpatched) ? "    (patched)" : "   (unable to patch)"));
                     Console.WriteLine("Exploit: " + exploitType);
                     Console.WriteLine("-------------------------------------------------------");
                     Console.WriteLine("*** Image created at: " + outputFile);
