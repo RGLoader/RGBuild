@@ -1041,7 +1041,6 @@ namespace RGBuild
         public static void print_Notice()
         {
             Console.WriteLine("\n----=== NOTICE ===----");
-            Console.WriteLine("Before running this build script verify that the filesystem files are present.");
             Console.WriteLine("READ THE README");
             Console.WriteLine("THIS IS A BETA!  Please leave feedback on the rgloader forums or in #rgloader!");
             Console.WriteLine("----------------------");
