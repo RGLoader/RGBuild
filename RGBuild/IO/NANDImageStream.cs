@@ -577,23 +577,34 @@ namespace RGBuild.IO
                     if (spare != null && spare.BadBlock)
                     {
                         badblocks.Add(i);
-                        if(i<BadBlockAreaStart)
-                            for (int y = BadBlockAreaStart; y < BlockCount; y++)
+                        Console.WriteLine("Found bad block at " + i.ToString("X"));
+                    }
+                }
+
+                int curBadBlock = BlockCount-1;
+
+                foreach(int i in badblocks){
+                    if(i<BadBlockAreaStart){
+
+                        while (badblocks.Contains(curBadBlock))
                         {
-                            ISpareData spare2 = GetBigBlockSpare(y);
-                            if (spare2.BlockId == i)
-                            {
-                                SeekToBlock(y);
-                                byte[] goodblock = new byte[BigBlockLength];
-                                _dataStream.Read(goodblock, 0, (int)BigBlockLength);
-                                SeekToBlock(i);
-                                _dataStream.Write(goodblock, 0, (int)BigBlockLength);
-                                
-                            }
+                            curBadBlock--;
+                        }
+
+                        ISpareData spare2 = GetBigBlockSpare(curBadBlock);
+                        if (spare2.BlockId == i)
+                        {
+                            SeekToBlock(curBadBlock);
+                            byte[] goodblock = new byte[BigBlockLength];
+                            _dataStream.Read(goodblock, 0, (int)BigBlockLength);
+                            SeekToBlock(i);
+                            _dataStream.Write(goodblock, 0, (int)BigBlockLength);
+                            curBadBlock--;
                         }
                     }
                 }
             }
+
             _dataStream.Position = 0;
             _eccStream.Position = 0;
             _fileStream.Position = 0;
@@ -785,21 +796,22 @@ namespace RGBuild.IO
                 int curBadBlock = 0;
                 int BigBlockLengthECC = PagesPerBigBlock * (PageLength + 0x10);
 
+                byte[] blank = new byte[BigBlockLengthECC];
+                for (int b = 0; b < BigBlockLengthECC; b++) blank[b] = 0x00;
+
                 foreach (short i in badblocks)
                 {
-                    if (i < BadBlockAreaStart)
+                    if (i < BadBlockAreaStart && i > 0)
                     {
-                        
+
                         ISpareData spare = GetBigBlockSpare(i);
                         Console.WriteLine("Remapping bad block "+i.ToString("X"));
                         int remappedBlock = BlockCount - (curBadBlock + 1);
 
-                        byte[] blank = new byte[BigBlockLengthECC];
-                        for (int b = 0; b < BigBlockLengthECC; b++) blank[b] = 0x00;
 
                         while (badblocks.Contains(remappedBlock) && curBadBlock < 32)
                         {
-
+                            Console.WriteLine("Skipping bad spare block " + remappedBlock.ToString("X"));
                             _imageStream.Position = (remappedBlock * PagesPerBigBlock * (PageLength + 0x10));
                             _imageStream.Write(blank, 0, (int)BigBlockLengthECC);
 
@@ -824,7 +836,10 @@ namespace RGBuild.IO
                         if (curBadBlock == 0x20) break; //need to change this for BigBlock
 
                     }
-                    else Console.WriteLine("Invalid bad block ID");
+                    else if (i > BlockCount || i < 0)
+                    {
+                        Console.WriteLine("Invalid bad block ID " + i.ToString("X"));
+                    } 
                 }
 
                 

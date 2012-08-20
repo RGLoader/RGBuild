@@ -205,7 +205,14 @@ namespace RGBuild
                 if (!String.IsNullOrEmpty(parsedData2["Bootloaders"]["7BL"]))
                     _7BL = parsedData2["Bootloaders"]["7BL"];
 
-                badblocks.AddRange(parsedData2["BadBlocks"].Select(kd => int.Parse(kd.KeyName, NumberStyles.HexNumber)));
+                //badblocks.AddRange(parsedData2["BadBlocks"].Select(kd => int.Parse(kd.KeyName, NumberStyles.HexNumber)));
+
+                string temp="";
+                foreach (KeyData kd in parsedData2["BadBlocks"])
+                {
+                    temp = kd.KeyName.Replace("0x", "");
+                    badblocks.Add(Convert.ToInt32(temp, 16));
+                }
             }
 
             if(exploitType!="JTAG"){
