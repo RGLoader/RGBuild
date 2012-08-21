@@ -1914,12 +1914,12 @@ namespace RGBuild
                         else if (consoleType == "Falcon" || consoleType == "Xenon" || consoleType == "Zephyr")
                         {
                             Console.WriteLine("\n*** Using pre-compiled 4bl for " + consoleType);
-                            File.Copy(defaultsDir + "\\CD.8453_falcon.bin", buildDir + "\\CD.8453.bin", true);
+                            File.Copy(defaultsDir + "\\CD.9452_falcon.bin", buildDir + "\\CD.9452.bin", true);
                         }
                         else if (consoleType == "Jasper")
                         {
                             Console.WriteLine("\n*** Using pre-compiled 4bl for " + consoleType);
-                            File.Copy(defaultsDir + "\\CD.8453_jasper.bin", buildDir + "\\CD.8453.bin", true);
+                            File.Copy(defaultsDir + "\\CD.9452_jasper.bin", buildDir + "\\CD.9452.bin", true);
                         }
 
                         //Copy CB_A
