@@ -1294,6 +1294,10 @@ namespace RGBuild.NAND
             io.Close();
             return bldata;
         }
+        public override byte[] GetData(bool writeDecrypted = true)
+        {
+            return GetData();
+        }
         public override void SetData(byte[] data)
         {
             X360IO io = new X360IO(data, true);
@@ -1489,6 +1493,10 @@ namespace RGBuild.NAND
             io.Close();
 
             return bldata;
+        }
+        public override byte[] GetData(bool writeDecrypted = true)
+        {
+            return GetData();
         }
         public override void SetData(byte[] data)
         {
