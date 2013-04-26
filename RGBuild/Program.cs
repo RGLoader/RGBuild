@@ -614,6 +614,28 @@ namespace RGBuild
             //Image.CurrentFileSystem.BlockOffset = ushort.Parse(pagesperblock, NumberStyles.HexNumber);
             image.CurrentFileSystem.BlockOffset = ushort.Parse(blockoffset, NumberStyles.HexNumber);
 
+            foreach (KeyData kd in parsedData["Payloads"])
+            {
+                string[] dat = kd.KeyName.Split(new[] { ":" }, StringSplitOptions.None);
+                dat[0] = dat[0].Replace("0x", "");
+                byte[] payloadData = File.ReadAllBytes(Path.Combine(path, dat[1]));
+                long blocklen = ((NANDImageStream)image.IO.Stream).BlockLength;
+                Console.WriteLine("Blocksize: 0x" + blocklen.ToString("X"));
+                Console.WriteLine("Payload Length: 0x" + payloadData.Length.ToString("X"));
+                int currentblock = (int)((long)(int.Parse(dat[0], NumberStyles.HexNumber)) / blocklen);
+                int blocks;
+                blocks = (payloadData.Length / (int)blocklen);
+                if (blocklen * blocks < payloadData.Length)
+                {
+                    blocks += 1;
+                }
+                for (int i = 0; i < blocks; i++)
+                {
+                    image.CurrentFileSystem.ReserveBlock(currentblock + i);
+                }
+                image.AddPayload(kd.Value, uint.Parse(dat[0], NumberStyles.HexNumber), payloadData);//FIXME: will still overwrite anything that already exists
+            }
+
             foreach (KeyData kd in parsedData["Files"])
             {
                 try
@@ -637,13 +659,6 @@ namespace RGBuild
                 {
                     Console.WriteLine("WRN: Unable to load filesystem file: " + kd.Value);
                 }
-            }
-
-            foreach (KeyData kd in parsedData["Payloads"])
-            {
-                string[] dat = kd.KeyName.Split(new[] { ":" }, StringSplitOptions.None);
-                dat[0] = dat[0].Replace("0x", "");
-                image.AddPayload(kd.Value, uint.Parse(dat[0], NumberStyles.HexNumber), File.ReadAllBytes(Path.Combine(path, dat[1])));
             }
 
             if (!String.IsNullOrEmpty(mobileb))
@@ -1265,7 +1280,8 @@ namespace RGBuild
                     {
                         buildVer = Arguments.Recognized["/kernel"];
                         if (!Lists.KernelVersions.Contains((ushort)Convert.ToUInt32(buildVer)))
-                            buildVer = "";
+                            Lists.KernelVersions.Add((ushort)Convert.ToUInt32(buildVer));
+                        //    buildVer = "";
                     }
 
                     //get info from user
@@ -1357,7 +1373,7 @@ namespace RGBuild
 
                     FSfileloc += "\\" + build;
 
-                    if (!File.Exists(FSfileloc + "\\xapi.xex"))
+                    if (!Directory.Exists(FSfileloc))
                     {
                         PrintError("=== UNABLE TO FIND FILESYSTEM FILES FOR THIS BUILD ===");
                     }

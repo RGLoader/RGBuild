@@ -190,6 +190,10 @@ namespace RGBuild.NAND
                 for (int i = 0; i < 5; i++)
                     BlockMap[i + ((NANDImageStream)Image.IO.Stream).ConfigBlockStart] = 0x1ffb;
         }
+        public void ReserveBlock(int block)
+        {
+            BlockMap[block] = 0x1ffb;
+        }
         public ushort AllocateNewBlock()
         {
             return AllocateNewBlock(1, 0);
