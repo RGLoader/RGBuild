@@ -848,6 +848,35 @@ namespace RGBuild
             this.Text = "RGBuild "+Program.Version;
         }
 
+        private void Main_DragDrop(object sender, DragEventArgs e)
+        {
+            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+
+
+            byte[][] keys = new byte[Program.StoredKeys.Count][];
+            for (int index = 0; index < Program.StoredKeys.Count; ++index)
+                keys[index] = Shared.HexStringToBytes(Program.StoredKeys[index].Split(new string[1] { "|-|" }, StringSplitOptions.None)[1]);
+            byte[] numArray = NANDImage.CheckKeysAgainstImage(files[0], keys);
+            this.Image = new NANDImage();
+            if (numArray == null || numArray.Length != 16)
+            {
+                OpenImageDialog openImageDialog = new OpenImageDialog(files[0]);
+                if (openImageDialog.ShowDialog() != DialogResult.OK)
+                    return;
+                this.Image.CPUKey = openImageDialog.CPUKey;
+                this.Image._1BLKey = openImageDialog.BLKey;
+            }
+            else
+                this.Image.CPUKey = numArray;
+            this.Image.OpenImage(files[0], 512);
+            this.refreshBootloaders();
+        }
+
+        private void Main_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy;
+        }
+
         
     }
 }
