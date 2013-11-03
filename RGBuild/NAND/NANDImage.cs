@@ -540,6 +540,7 @@ namespace RGBuild.NAND
         {
             if(SMC != null)
             {
+                Header.SmcAddress = (uint)(0x4000 - SMC.GetData(true).Length);
                 IO.Stream.Position = Header.SmcAddress;
                 SMC.Write();
             }
@@ -622,7 +623,7 @@ namespace RGBuild.NAND
         }
         public RGBPayloadEntry AddPayload(string description, uint address, byte[] data)
         {
-            RGBPayloadEntry payload = new RGBPayloadEntry {Description = description, Address = address, Data = data};
+            RGBPayloadEntry payload = new RGBPayloadEntry {Description = description, Address = address, Data = data, Size = (uint)data.Length};
             if(Payloads == null)
             {
                 if (Header == null)
@@ -635,7 +636,7 @@ namespace RGBuild.NAND
         }
         public void LoadPayloadList()
         {
-            IO.Stream.Position = 0x84;
+            IO.Stream.Position = 0x100;
             Payloads = new RGBPayloadList(IO);
             Payloads.Read();
         }
@@ -643,7 +644,16 @@ namespace RGBuild.NAND
         {
             if(Payloads != null)
             {
-                IO.Stream.Position = 0x84;
+                //reserve blocks for payloads
+               /* foreach(RGBPayloadEntry entry in Payloads.Payloads)
+                {
+                    int startblk = (int)(entry.Address / ((NANDImageStream)IO.Stream).BlockLength);
+                    int numblks =(int)((entry.Size / ((NANDImageStream)IO.Stream).BlockLength) + (entry.Size % ((NANDImageStream)IO.Stream).BlockLength > 0 ? 1 : 0));
+                    for(int i=startblk; i<numblks; i++)
+                        CurrentFileSystem.BlockMap[i] = 0x1ffb;
+                }*/
+
+                IO.Stream.Position = 0x100;
                 Payloads.Write();
             }
         }
@@ -654,15 +664,31 @@ namespace RGBuild.NAND
 
             Console.WriteLine("Writing bootloaders...");
             SaveBootloaders(Header.Entrypoint, Header.SysUpdateAddress);
+            Console.WriteLine(" Pages per block: " + ((NANDImageStream)IO.Stream).PagesPerBlock);
 
-            Console.WriteLine("Writing config blocks...");
-            SaveConfigBlocks();
+            if (Payloads != null)
+            {
+                foreach (RGBPayloadEntry entry in Payloads.Payloads)
+                {
+                    int startblk = (int)(entry.Address / ((NANDImageStream)IO.Stream).BlockLength);
+                    int numblks = (int)((entry.Size / ((NANDImageStream)IO.Stream).BlockLength) + (entry.Size % ((NANDImageStream)IO.Stream).BlockLength > 0 ? 1 : 0));
+                    for (int i = 0; i < numblks; i++)
+                        CurrentFileSystem.BlockMap[i + startblk] = 0x1ffb;
+                }
+            }
 
-            Console.WriteLine("Writing filesystem...");
-            SaveFileSystem();
+            if (((NANDImageStream)IO.Stream).PagesPerBlock <= 0x20 )
+            {
+                Console.WriteLine("Writing config blocks...");
+                SaveConfigBlocks();
+
+                Console.WriteLine("Writing filesystem...");
+                SaveFileSystem();
+            }
+
             if (Header.ContainsRGBP)
                 SavePayloadList();
-
+            
             Console.WriteLine("Writing SMC...");
             SaveSMC();
             Console.WriteLine("Writing keyvault...");

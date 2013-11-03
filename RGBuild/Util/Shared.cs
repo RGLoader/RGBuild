@@ -2,11 +2,40 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using RGBuild.NAND;
+using System.Net;
+using System.Net.NetworkInformation;
 
 namespace RGBuild.Util
 {
     class Shared
     {
+
+        public static byte[] LocalIPAddress()
+        {
+            
+            NetworkInterface[] cards = NetworkInterface.GetAllNetworkInterfaces();
+            foreach (NetworkInterface card in cards)
+            {
+                if (card.NetworkInterfaceType == NetworkInterfaceType.Ethernet || card.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 || card.NetworkInterfaceType == NetworkInterfaceType.GigabitEthernet)
+                {
+                    GatewayIPAddressInformationCollection address = card.GetIPProperties().GatewayAddresses;
+                    if (address.Count > 0)
+                    {
+                        foreach (UnicastIPAddressInformation ip in card.GetIPProperties().UnicastAddresses)
+                        {
+                            if (ip.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                            {
+                                return ip.Address.GetAddressBytes();
+                            }
+                        }
+                    }
+                }
+                
+            }
+           
+            return new byte[4];
+        }
+
         public static byte[] HexStringToBytes(string hexString)
         {
             if (hexString == null)

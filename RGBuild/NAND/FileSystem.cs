@@ -166,13 +166,13 @@ namespace RGBuild.NAND
             //start block is after CG or last payload
             double fsStartBlock = ((double)(Image.Header.SysUpdateAddress + 0x20000)/(double)0x4000);
 
-            if(Image.Payloads != null)
+            /*if(Image.Payloads != null)
                 foreach (RGBPayloadEntry entry in Image.Payloads.Payloads)
                 {
                     double entryblock = ((double)((entry.Address + entry.Size) / (double)0x4000));
 
                     if (entryblock > fsStartBlock) fsStartBlock = entryblock;
-                }
+                }*/
 
             //round up to next block
             if (fsStartBlock != (int)fsStartBlock) fsStartBlock = (int)fsStartBlock + 1;
@@ -189,10 +189,6 @@ namespace RGBuild.NAND
             if (((NANDImageStream)Image.IO.Stream).ConfigBlockStart > 0 && Image.ConfigBlock != null)
                 for (int i = 0; i < 5; i++)
                     BlockMap[i + ((NANDImageStream)Image.IO.Stream).ConfigBlockStart] = 0x1ffb;
-        }
-        public void ReserveBlock(int block)
-        {
-            BlockMap[block] = 0x1ffb;
         }
         public ushort AllocateNewBlock()
         {
@@ -455,7 +451,7 @@ namespace RGBuild.NAND
             {
                 long pos = Image.IO.Stream.Position;
                 if (entry.BlockNumber == 0)
-                    entry.BlockNumber = AllocateNewBlock();
+                    entry.BlockNumber = AllocateNewBlock((int)(entry.Size / ((NANDImageStream)Image.IO.Stream).BlockLength) + (entry.Size % ((NANDImageStream)Image.IO.Stream).BlockLength > 0 ? 1 : 0), 0);
                 SetEntryData(entry, entry.GetData());
                 Image.IO.Stream.Position = pos;
                 if (j % fncount == 0)

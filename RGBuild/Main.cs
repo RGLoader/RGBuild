@@ -184,7 +184,6 @@ namespace RGBuild
                     if (lvi.Tag.GetType().BaseType == typeof(Bootloader))
                     {
                         Bootloader bl = (Bootloader)lvi.Tag;
-
                         File.WriteAllBytes(Path.Combine(fbd.SelectedPath, getBootloaderName(bl) + "." + bl.Build + ".bin"), bl.GetData(use_cpu_key));
                     }
                     else if (lvi.Tag.GetType() == typeof(KeyVault))
@@ -258,7 +257,7 @@ namespace RGBuild
                 if (ofd.ShowDialog() == DialogResult.OK)
                 {
                     byte[] filedata = File.ReadAllBytes(ofd.FileName);
-                    if (filedata.Length != 0x3000)
+                    if (filedata.Length != smc.GetData(true).Length)
                     {
                         MessageBox.Show("Invalid SMC");
                         return;
@@ -622,8 +621,10 @@ namespace RGBuild
                 }
                 if(Image.SMC == null)
                     Image.SMC = new SMC(Image.IO);
-
                 Image.SMC.SetData(data);
+
+                Image.Header.SmcSize = (uint)(Image.SMC.GetData(true).Length);
+                Image.Header.SmcAddress = (uint)(0x4000 - Image.Header.SmcSize);
                 refreshBootloaders();
             }
         }

@@ -19,8 +19,8 @@ namespace RGBuild
     {
        
 
-        public const string Version = "3.7";
-        public const string RGversion = "0v300";
+        public const string Version = "4.0";
+        public const string RGversion = "0v400";
 
         private static readonly string[] CmdLineOptions = new[] { 
             "/guided", "/banner", "/crc32", 
@@ -514,6 +514,8 @@ namespace RGBuild
                 image.Header.Size = bl6addr;
                 image.Header.SysUpdateAddress = bl6addr;
 
+                image.Header.kdNetIP = Util.Shared.LocalIPAddress();
+                //image.Header.kdNetIP = new byte[] {192, 168, 2, 8};
                 {
                     SMC_location = SMC_location.Replace("0x", "");
                     if (SMC_location.Length % 2 != 0) SMC_location = "0" + SMC_location;
@@ -618,22 +620,15 @@ namespace RGBuild
             {
                 string[] dat = kd.KeyName.Split(new[] { ":" }, StringSplitOptions.None);
                 dat[0] = dat[0].Replace("0x", "");
-                byte[] payloadData = File.ReadAllBytes(Path.Combine(path, dat[1]));
-                long blocklen = ((NANDImageStream)image.IO.Stream).BlockLength;
-                Console.WriteLine("Blocksize: 0x" + blocklen.ToString("X"));
-                Console.WriteLine("Payload Length: 0x" + payloadData.Length.ToString("X"));
-                int currentblock = (int)((long)(int.Parse(dat[0], NumberStyles.HexNumber)) / blocklen);
-                int blocks;
-                blocks = (payloadData.Length / (int)blocklen);
-                if (blocklen * blocks < payloadData.Length)
-                {
-                    blocks += 1;
-                }
-                for (int i = 0; i < blocks; i++)
-                {
-                    image.CurrentFileSystem.ReserveBlock(currentblock + i);
-                }
-                image.AddPayload(kd.Value, uint.Parse(dat[0], NumberStyles.HexNumber), payloadData);//FIXME: will still overwrite anything that already exists
+                uint addr = uint.Parse(dat[0], NumberStyles.HexNumber);
+                byte[] data = File.ReadAllBytes(Path.Combine(path, dat[1]));
+                uint size = (uint)data.Length;
+                image.AddPayload(kd.Value, addr, data);
+
+                int startblk = (int)(addr / ((NANDImageStream)image.IO.Stream).BlockLength);
+                int numblks = (int)((size / ((NANDImageStream)image.IO.Stream).BlockLength) + (size % ((NANDImageStream)image.IO.Stream).BlockLength > 0 ? 1 : 0));
+                for (int i = 0; i < numblks; i++)
+                    image.CurrentFileSystem.BlockMap[i+startblk] = 0x1ffb;
             }
 
             foreach (KeyData kd in parsedData["Files"])
@@ -1279,8 +1274,7 @@ namespace RGBuild
                     if (Arguments.Recognized.TryGetValue("/kernel", out buildVer))
                     {
                         buildVer = Arguments.Recognized["/kernel"];
-                        if (!Lists.KernelVersions.Contains((ushort)Convert.ToUInt32(buildVer)))
-                            Lists.KernelVersions.Add((ushort)Convert.ToUInt32(buildVer));
+                        //if (!Lists.KernelVersions.Contains((ushort)Convert.ToUInt32(buildVer)))
                         //    buildVer = "";
                     }
 
@@ -1373,7 +1367,7 @@ namespace RGBuild
 
                     FSfileloc += "\\" + build;
 
-                    if (!Directory.Exists(FSfileloc))
+                    if (!File.Exists(FSfileloc + "\\xapi.xex"))
                     {
                         PrintError("=== UNABLE TO FIND FILESYSTEM FILES FOR THIS BUILD ===");
                     }

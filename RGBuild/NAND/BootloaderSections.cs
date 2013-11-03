@@ -218,7 +218,7 @@ namespace RGBuild.NAND
         public void Load(X360IO io)
         {
             Address = io.Reader.ReadUInt32();
-            if (Address == 0xFFFFFFFF)
+            if (Address == 0xFFFFFFFF || Address == 0x00000000)
                 return;
             Size = io.Reader.ReadUInt32();
             DescSize = io.Reader.ReadByte();
@@ -273,7 +273,7 @@ namespace RGBuild.NAND
             {
                 RGBPayloadEntry entry = new RGBPayloadEntry();
                 entry.Load(io);
-                if (entry.Address == 0xFFFFFFFF)
+                if (entry.Address == 0xFFFFFFFF || entry.Address == 0)
                     break;
                 Payloads.Add(entry);
             }
@@ -435,6 +435,7 @@ namespace RGBuild.NAND
     {
         public byte CopyrightSign = 0xa9;
         public string Copyright = " 2004-2011 Microsoft Corporation. All rights reserved."; // 0x40 bytes
+        public ushort RGBPIndicator;
         public byte[] Reserved = new byte[0x10];
         public uint KeyVaultSize = 0x4000;
         public uint SysUpdateAddress = 0x70000;
@@ -445,7 +446,11 @@ namespace RGBuild.NAND
         public uint SmcConfigAddress;
         public uint SmcSize = 0x3000;
         public uint SmcAddress = 0x1000;
-        public ushort RGBPIndicator;
+        
+        public byte[] kdNetData = new byte[] { 0xCA, 0x4A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x48, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x22, 0x48, 0x0F, 0x3E, 0x39, 0xC3, 0x51 };
+        public byte[] kdNetIP = new byte[4];
+        
+
         public bool ContainsRGBP
         {
             get
@@ -477,7 +482,8 @@ namespace RGBuild.NAND
         {
             base.Read(io);
             CopyrightSign = io.Reader.ReadByte();
-            Copyright = io.Reader.ReadAsciiString(0x3F);
+            Copyright = io.Reader.ReadAsciiString(0x3D);
+            RGBPIndicator = io.Reader.ReadUInt16();
             Reserved = io.Reader.ReadBytes(0x10);
             KeyVaultSize = io.Reader.ReadUInt32();
             SysUpdateAddress = io.Reader.ReadUInt32();
@@ -488,9 +494,11 @@ namespace RGBuild.NAND
             SmcConfigAddress = io.Reader.ReadUInt32();
             SmcSize = io.Reader.ReadUInt32();
             SmcAddress = io.Reader.ReadUInt32();
-            RGBPIndicator = io.Reader.ReadUInt16();
             if (HeaderVersion == 0)
                 Build = io.Reader.ReadUInt16();
+            kdNetData = io.Reader.ReadBytes(0x20);
+            kdNetIP = io.Reader.ReadBytes(4);
+
         }
 
         public override byte[] GetData()
@@ -516,7 +524,8 @@ namespace RGBuild.NAND
         {
             base.Write(io);
             io.Writer.Write(CopyrightSign);
-            io.Writer.WriteAsciiString(Copyright, 0x3F);
+            io.Writer.WriteAsciiString(Copyright, 0x3D);
+            io.Writer.Write(RGBPIndicator);
             io.Writer.Write(Reserved);
             io.Writer.Write(KeyVaultSize);
             io.Writer.Write(SysUpdateAddress);
@@ -527,7 +536,8 @@ namespace RGBuild.NAND
             io.Writer.Write(SmcConfigAddress);
             io.Writer.Write(SmcSize);
             io.Writer.Write(SmcAddress);
-            io.Writer.Write(RGBPIndicator);
+            io.Writer.Write(kdNetData);
+            io.Writer.Write(kdNetIP);
         }
     }
     
@@ -1294,9 +1304,13 @@ namespace RGBuild.NAND
             io.Close();
             return bldata;
         }
-        public override byte[] GetData(bool writeDecrypted = true)
+        public override byte[] GetData(bool writeDecrypted)
         {
-            return GetData();
+            X360IO io = new X360IO(new MemoryStream(), true);
+            Write(io, writeDecrypted);
+            byte[] bldata = ((MemoryStream)io.Stream).ToArray();
+            io.Close();
+            return bldata;
         }
         public override void SetData(byte[] data)
         {
@@ -1388,6 +1402,7 @@ namespace RGBuild.NAND
             Bootloader.Rc4Key = new HMACSHA1(Bootloader.HmacShaKey).ComputeHash(data, 0x20, 0x10);
             for (int i = 0; i < 0x10; i++)
                 data[0x20 + i] = Bootloader.Rc4Key[i];
+
             data = new HMACSHA1(Bootloader.Image.CPUKey).ComputeHash(data, 0, 0x220);
             Array.Resize(ref data, 0x10);
             return data;
@@ -1494,9 +1509,13 @@ namespace RGBuild.NAND
 
             return bldata;
         }
-        public override byte[] GetData(bool writeDecrypted = true)
+        public override byte[] GetData(bool writeDecrypted)
         {
-            return GetData();
+            X360IO io = new X360IO(new MemoryStream(), true);
+            Write(io, writeDecrypted);
+            byte[] bldata = ((MemoryStream)io.Stream).ToArray();
+            io.Close();
+            return bldata;
         }
         public override void SetData(byte[] data)
         {
