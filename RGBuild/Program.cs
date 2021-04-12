@@ -19,8 +19,8 @@ namespace RGBuild
     {
        
 
-        public const string Version = "4.0";
-        public const string RGversion = "0v400";
+        public const string Version = "4.1";
+        public const string RGversion = "0v800";
 
         private static readonly string[] CmdLineOptions = new[] { 
             "/guided", "/banner", "/crc32", 
@@ -514,8 +514,10 @@ namespace RGBuild
                 image.Header.Size = bl6addr;
                 image.Header.SysUpdateAddress = bl6addr;
 
-                image.Header.kdNetIP = Util.Shared.LocalIPAddress();
-                //image.Header.kdNetIP = new byte[] {192, 168, 2, 8};
+                //image.Header.kdNetIP = Util.Shared.LocalIPAddress();
+                image.Header.kdNetIP = new byte[] {192, 168, 0, 125};
+                //image.Header.kdNetData = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+                //image.Header.kdNetIP = new byte[] { 0, 0, 0, 0 };
                 {
                     SMC_location = SMC_location.Replace("0x", "");
                     if (SMC_location.Length % 2 != 0) SMC_location = "0" + SMC_location;
@@ -848,17 +850,20 @@ namespace RGBuild
         {
             if (!System.IO.Directory.Exists(dest)) System.IO.Directory.CreateDirectory(dest);
 
-            try
+            string[] fileArray = Directory.GetFiles(source);
+            for (int i = 0; i < fileArray.Length; i++)
             {
-                string[] fileArray = Directory.GetFiles(source);
-                for (int i = 0; i < fileArray.Length; i++)
+                try
                 {
                     File.Copy(fileArray[i], dest + "\\" + Path.GetFileName(fileArray[i]), true);
                 }
-            }
-            catch
-            {
-                return false;
+
+                catch(Exception E)
+                {
+                    Console.WriteLine("WRN: Unable to copy file: " + Path.GetFileName(fileArray[i]));
+                    Console.WriteLine("     Exception: " + E.ToString());
+                    continue;
+                }
             }
             return true;
         }
@@ -1367,7 +1372,7 @@ namespace RGBuild
 
                     FSfileloc += "\\" + build;
 
-                    if (!File.Exists(FSfileloc + "\\xapi.xex"))
+                    if (!File.Exists(FSfileloc + "\\xam.xex"))
                     {
                         PrintError("=== UNABLE TO FIND FILESYSTEM FILES FOR THIS BUILD ===");
                     }
@@ -1510,8 +1515,8 @@ namespace RGBuild
 
                     //init builds folder & copy default files
                     if (System.IO.Directory.Exists(buildDir)) System.IO.Directory.Delete(buildDir, true);
-                    System.IO.Directory.CreateDirectory(buildDir);
-                    System.IO.Directory.CreateDirectory(buildDir);
+                        System.IO.Directory.CreateDirectory(buildDir);
+                    //System.IO.Directory.CreateDirectory(buildDir);
 
                     if (consoleType == "Trinity" || consoleType == "Corona") buildINI = slimINI;
                     else if (exploitType == "JTAG") buildINI = jtagINI;

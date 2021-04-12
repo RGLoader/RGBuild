@@ -1128,17 +1128,24 @@ namespace RGBuild.NAND
 
             if (bootloader.GetType() == typeof(Bootloader6BL))
             {
-                // verify next loaders signature
-                byte[] sig = ((Bootloader6BL)bootloader).Signature;
+                try
+                {
+                    // verify next loaders signature
+                    byte[] sig = ((Bootloader6BL)bootloader).Signature;
 
-                RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
-                rsa.ImportParameters(Misc.GenerateRSAParametersFromPublicKey(RsaPublicKey));
-                RSAPKCS1SignatureDeformatter sigDeformatter = new RSAPKCS1SignatureDeformatter(rsa);
-                sigDeformatter.SetHashAlgorithm("SHA");
-                return sigDeformatter.VerifySignature(hash, sig)
-                           ? BootloaderSecurityType.SecureStock
-                           : BootloaderSecurityType.Unknown;
-                          //: Lists.GlitchableCBs.Contains(Image.GetLastBootloader(this).Build) ? BootloaderSecurityType.SecureGlitch : BootloaderSecurityType.Insecure;
+                    RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
+                    rsa.ImportParameters(Misc.GenerateRSAParametersFromPublicKey(RsaPublicKey));
+                    RSAPKCS1SignatureDeformatter sigDeformatter = new RSAPKCS1SignatureDeformatter(rsa);
+                    sigDeformatter.SetHashAlgorithm("SHA");
+                    return sigDeformatter.VerifySignature(hash, sig)
+                               ? BootloaderSecurityType.SecureStock
+                               : BootloaderSecurityType.Unknown;
+                    //: Lists.GlitchableCBs.Contains(Image.GetLastBootloader(this).Build) ? BootloaderSecurityType.SecureGlitch : BootloaderSecurityType.Insecure;
+                }
+                catch
+                {
+                    return BootloaderSecurityType.Unknown;
+                }
             }
             if (bootloader.GetType() == typeof(Bootloader5BL))
                 return hash.SequenceEqual(Digest5BL)

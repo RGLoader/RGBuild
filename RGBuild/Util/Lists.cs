@@ -12,7 +12,7 @@ namespace RGBuild.Util
         public static List<ushort> JASPER_CB = new List<ushort> { 6712, 6723, 6750, 6751, 6752, 6753 };
         public static List<ushort> RGH_CB = new List<ushort> { 4578, 5771, 6750, 9188 };
         public static List<ushort> JTAG_CB = new List<ushort> { 1888, 1902, 1903, 1920, 1921, 4558, 4580, 5761, 5766, 5770, 6712, 6723, 7363, 7371 };
-        public static List<ushort> KernelVersions = new List<ushort> { 13599, 14699, 14719, 15574 };
+        public static List<ushort> KernelVersions = new List<ushort> { 13599, 14699, 14719, 15574, 17150, 17349, 17489};
         public static List<string> ExploitTypes = new List<string> { "RGH", "RGH2", "JTAG" };
 
         public static Dictionary<XeKey, XeKeyBinding> XeKeys = new Dictionary<XeKey, XeKeyBinding>

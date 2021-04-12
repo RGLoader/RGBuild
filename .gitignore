@@ -10,7 +10,9 @@
 *.so
 *.pch
 *.lastbuildstate
-
+RGBuild/bin/Debug
+RGBuild/bin/Release
+RGBuild/obj
 
 # Packages #
 ############
@@ -48,3 +50,4 @@
 Icon?
 ehthumbs.db
 Thumbs.db
+RGBuild.dt
